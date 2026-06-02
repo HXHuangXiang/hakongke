@@ -228,27 +228,27 @@ class KonkeRemote(RemoteEntity):
         """Remove one learned command from this remote type's group."""
         group = group or DEFAULT_REMOTE_GROUP
         if self._remote_type == TYPE_IR:
-            return await self._device.ir_remove(command, group)
+            return await self._device.ir_remove(command, group=group)
         if self._remote_type == TYPE_RF:
-            return await self._device.rf_remove(command, group)
+            return await self._device.rf_remove(command, group=group)
         return False
 
     async def async_remove_group(self, group: str | None = None) -> bool | None:
         """Remove all learned commands from this remote type's group."""
         group = group or DEFAULT_REMOTE_GROUP
         if self._remote_type == TYPE_IR:
-            return await self._device.ir_remove_group(group)
+            return await self._device.ir_remove_group(group=group)
         if self._remote_type == TYPE_RF:
-            return await self._device.rf_remove_group(group)
+            return await self._device.rf_remove_group(group=group)
         return False
 
     async def async_emit(self, command: str, group: str | None = None) -> bool:
         """Emit one learned command from this remote type's group."""
         group = group or DEFAULT_REMOTE_GROUP
         if self._remote_type == TYPE_IR:
-            await self._device.ir_emit(command, group)
+            await self._device.ir_emit(command, group=group)
         elif self._remote_type == TYPE_RF:
-            await self._device.rf_emit(command, group)
+            await self._device.rf_emit(command, group=group)
         else:
             return False
         return True

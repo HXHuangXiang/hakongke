@@ -11,7 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.remote import ATTR_DELAY_SECS, ATTR_NUM_REPEATS
 from homeassistant.components import persistent_notification
 from homeassistant.const import ATTR_ENTITY_ID, CONF_HOST, CONF_NAME, CONF_TIMEOUT, Platform
-from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
@@ -73,7 +73,7 @@ SEND_SLOT_SCHEMA = vol.Schema(
         vol.Required(CONF_SLOT): vol.All(int, vol.Range(**SLOT_RANGE)),
         vol.Optional(CONF_GROUP, default=DEFAULT_REMOTE_GROUP): cv.string,
         vol.Optional(ATTR_NUM_REPEATS, default=1): vol.All(int, vol.Range(min=1)),
-        vol.Optional(ATTR_DELAY_SECS, default=0.4): vol.Coerce(float),
+        vol.Optional(ATTR_DELAY_SECS, default=0.4): vol.All(vol.Coerce(float), vol.Range(min=0)),
     }
 )
 
@@ -538,7 +538,14 @@ def _notify(hass: HomeAssistant, title: str, message: str, notification_id: str)
     persistent_notification.async_create(hass, message, title=title, notification_id=notification_id)
 
 
-@callback
-def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload entry when options change."""
-    hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+    task = hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+
+    def _log_reload_result(done_task: asyncio.Task) -> None:
+        try:
+            done_task.result()
+        except Exception:  # noqa: BLE001 - keep options updates from surfacing as service failures.
+            _LOGGER.exception("Failed to reload hakongke entry after options update")
+
+    task.add_done_callback(_log_reload_result)

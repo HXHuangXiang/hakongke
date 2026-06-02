@@ -116,7 +116,7 @@ class KonkeRemoteButton(ButtonEntity):
         """Send the learned remote command."""
         slot = str(self._slot)
         if self._remote_type == TYPE_IR:
-            await self._device.ir_emit(slot, self._group)
+            await self._device.ir_emit(slot, group=self._group)
         elif self._remote_type == TYPE_RF:
-            await self._device.rf_emit(slot, self._group)
+            await self._device.rf_emit(slot, group=self._group)
         _LOGGER.debug("Send %s remote button slot %s: %s", self._remote_type, slot, self.unique_id)
