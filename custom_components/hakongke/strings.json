@@ -1,0 +1,50 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add hakongke device",
+        "description": "Configure a local hakongke device.",
+        "data": {
+          "host": "Host",
+          "name": "Name",
+          "model": "Model",
+          "enable_switch": "Create switch entities",
+          "enable_light": "Create light entities",
+          "enable_ir_remote": "Create IR remote entity",
+          "enable_rf_remote": "Create RF remote entity"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This hakongke device is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "hakongke options",
+        "data": {
+          "enable_switch": "Create switch entities",
+          "enable_light": "Create light entities",
+          "enable_ir_remote": "Create IR remote entity",
+          "enable_rf_remote": "Create RF remote entity"
+        }
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "outlet": {
+        "name": "Outlet"
+      },
+      "usb": {
+        "name": "USB"
+      }
+    },
+    "sensor": {
+      "power": {
+        "name": "Power"
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
- {
-  "name": "Konke",
+{
+  "name": "hakongke",
   "country": "CN",
-  "render_readme": false,
-  "domains": ["sensor","swtich"]
+  "render_readme": true,
+  "domains": ["switch", "light", "remote", "sensor"]
 }

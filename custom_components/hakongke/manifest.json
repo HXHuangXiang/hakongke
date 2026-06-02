@@ -1,0 +1,13 @@
+{
+  "domain": "hakongke",
+  "name": "hakongke",
+  "version": "2.0.0",
+  "documentation": "https://github.com/HXHuangXiang/hakongke",
+  "issue_tracker": "https://github.com/HXHuangXiang/hakongke/issues",
+  "codeowners": ["@HXHuangXiang"],
+  "config_flow": true,
+  "dependencies": [],
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "requirements": ["pykongke==3.0.0"]
+}

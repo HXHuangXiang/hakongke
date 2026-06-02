@@ -1,0 +1,46 @@
+ir_learn:
+  name: Learn IR command
+  description: Learn an infrared command into the Konke device default pykongke group.
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          domain: remote
+    slot:
+      required: true
+      selector:
+        number:
+          min: 1000
+          max: 999999
+          mode: box
+    timeout:
+      required: false
+      default: 10
+      selector:
+        number:
+          min: 0
+          mode: box
+rf_learn:
+  name: Learn RF command
+  description: Learn a radio frequency command into the Konke device default pykongke group.
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          domain: remote
+    slot:
+      required: true
+      selector:
+        number:
+          min: 1000
+          max: 999999
+          mode: box
+    timeout:
+      required: false
+      default: 10
+      selector:
+        number:
+          min: 0
+          mode: box
