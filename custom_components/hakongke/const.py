@@ -16,6 +16,7 @@ CONF_REMOTE_BUTTONS = "remote_buttons"
 DEFAULT_NAME = "hakongke"
 DEFAULT_TIMEOUT = 10
 DEFAULT_SLOT = 1001
+DEFAULT_REMOTE_GROUP = "pykongke"
 SLOT_RANGE = {"min": 1000, "max": 999999}
 
 MODEL_K1 = "k1"
@@ -50,12 +51,14 @@ TYPE_IR = "ir"
 TYPE_RF = "rf"
 
 BUTTON_NAME = "name"
+BUTTON_GROUP = "group"
 BUTTON_SLOT = "slot"
 BUTTON_TYPE = "type"
 
 DATA_DEVICE = "device"
 DATA_MODEL = CONF_MODEL
 DATA_NAME = CONF_NAME
+DATA_REMOTE_BUTTON_ENTITIES = "remote_button_entities"
 DATA_REMOTE_ENTITIES = "remote_entities"
 
 

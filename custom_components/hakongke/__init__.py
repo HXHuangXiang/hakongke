@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
+    BUTTON_GROUP,
     BUTTON_NAME,
     BUTTON_SLOT,
     BUTTON_TYPE,
@@ -20,7 +21,9 @@ from .const import (
     DATA_DEVICE,
     DATA_MODEL,
     DATA_NAME,
+    DATA_REMOTE_BUTTON_ENTITIES,
     DATA_REMOTE_ENTITIES,
+    DEFAULT_REMOTE_GROUP,
     DEFAULT_SLOT,
     DEFAULT_TIMEOUT,
     DOMAIN,
@@ -37,6 +40,9 @@ PLATFORMS = [Platform.SWITCH, Platform.LIGHT, Platform.REMOTE, Platform.SENSOR, 
 
 SERVICE_LEARN_IR_BUTTON = "learn_ir_button"
 SERVICE_LEARN_RF_BUTTON = "learn_rf_button"
+SERVICE_CLEAR_IR_GROUP = "clear_ir_group"
+SERVICE_DELETE_IR_BUTTON = "delete_ir_button"
+CONF_GROUP = "group"
 
 LEARN_BUTTON_SCHEMA = vol.Schema(
     {
@@ -45,6 +51,15 @@ LEARN_BUTTON_SCHEMA = vol.Schema(
         vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): vol.All(int, vol.Range(min=0)),
     }
 )
+
+CLEAR_GROUP_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(CONF_GROUP): cv.string,
+    }
+)
+
+DELETE_BUTTON_SCHEMA = vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_id})
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -72,6 +87,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         DATA_DEVICE: device,
         DATA_MODEL: model,
         DATA_NAME: entry.data.get(DATA_NAME) or entry_title(entry.data),
+        DATA_REMOTE_BUTTON_ENTITIES: [],
         DATA_REMOTE_ENTITIES: [],
     }
 
@@ -116,7 +132,8 @@ def _register_learning_services(hass: HomeAssistant) -> None:
 
         entry, entity = match
         buttons = list(entry.options.get(CONF_REMOTE_BUTTONS, []))
-        slot = _remote_button_slot(buttons, remote_type, name)
+        group = DEFAULT_REMOTE_GROUP
+        slot = _remote_button_slot(buttons, remote_type, group, name)
         if slot > SLOT_RANGE["max"]:
             _notify(
                 hass,
@@ -140,7 +157,7 @@ def _register_learning_services(hass: HomeAssistant) -> None:
             entity_id,
         )
 
-        result = await entity.async_learn(str(slot), timeout=timeout)
+        result = await entity.async_learn(str(slot), group=group, timeout=timeout)
         if not result:
             _notify(
                 hass,
@@ -154,9 +171,13 @@ def _register_learning_services(hass: HomeAssistant) -> None:
         buttons = [
             button
             for button in buttons
-            if not (button.get(BUTTON_TYPE) == remote_type and button.get(BUTTON_NAME) == name)
+            if not (
+                button.get(BUTTON_TYPE) == remote_type
+                and _button_group(button) == group
+                and button.get(BUTTON_NAME) == name
+            )
         ]
-        buttons.append({BUTTON_TYPE: remote_type, BUTTON_SLOT: slot, BUTTON_NAME: name})
+        buttons.append({BUTTON_TYPE: remote_type, BUTTON_GROUP: group, BUTTON_SLOT: slot, BUTTON_NAME: name})
         options = {**entry.options, CONF_REMOTE_BUTTONS: buttons}
         hass.config_entries.async_update_entry(entry, options=options)
         _notify(
@@ -167,12 +188,141 @@ def _register_learning_services(hass: HomeAssistant) -> None:
         )
         _LOGGER.info("Learn %s remote button success on slot %s: %s", remote_type, slot, entity_id)
 
+    async def _handle_clear_ir_group(call: ServiceCall) -> None:
+        entity_id = call.data[ATTR_ENTITY_ID]
+        group = call.data[CONF_GROUP].strip()
+        notification_id = f"{DOMAIN}_clear_ir_group"
+        log_title = "hakongke 红外清理"
+
+        if not group:
+            _notify(hass, log_title, "红外组不能为空。", notification_id)
+            return
+
+        match = _find_remote_entity(hass, entity_id, TYPE_IR)
+        if match is None:
+            _notify(
+                hass,
+                log_title,
+                f"没有找到匹配的红外遥控实体：{entity_id}。",
+                notification_id,
+            )
+            _LOGGER.warning("No IR remote entity matched clear group request: %s", entity_id)
+            return
+
+        entry, entity = match
+        _notify(
+            hass,
+            log_title,
+            f"开始清空该控客设备红外组“{group}”中的已学习按键。",
+            notification_id,
+        )
+        result = await entity.async_remove_group(group)
+        if result is False:
+            _notify(
+                hass,
+                log_title,
+                f"清空红外组“{group}”失败。请确认设备在线后重试。",
+                notification_id,
+            )
+            _LOGGER.warning("Clear IR group failed: %s %s", entity_id, group)
+            return
+
+        buttons = [
+            button
+            for button in entry.options.get(CONF_REMOTE_BUTTONS, [])
+            if not (button.get(BUTTON_TYPE) == TYPE_IR and _button_group(button) == group)
+        ]
+        options = {**entry.options, CONF_REMOTE_BUTTONS: buttons}
+        hass.config_entries.async_update_entry(entry, options=options)
+        _notify(
+            hass,
+            log_title,
+            f"已清空该控客设备红外组“{group}”，并移除 Home Assistant 中该组保存的红外按钮。",
+            notification_id,
+        )
+        _LOGGER.info("Clear IR group success: %s %s", entity_id, group)
+
+    async def _handle_delete_ir_button(call: ServiceCall) -> None:
+        entity_id = call.data[ATTR_ENTITY_ID]
+        notification_id = f"{DOMAIN}_delete_ir_button"
+        log_title = "hakongke 红外删除"
+
+        match = _find_remote_button_entity(hass, entity_id, TYPE_IR)
+        if match is None:
+            _notify(
+                hass,
+                log_title,
+                f"没有找到匹配的红外按钮实体：{entity_id}。",
+                notification_id,
+            )
+            _LOGGER.warning("No IR button entity matched delete request: %s", entity_id)
+            return
+
+        entry, button_entity = match
+        remote_match = _find_remote_entity_for_entry(hass, entry.entry_id, TYPE_IR)
+        if remote_match is None:
+            _notify(
+                hass,
+                log_title,
+                "没有找到对应的红外遥控实体，无法删除设备里的红外按键。",
+                notification_id,
+            )
+            _LOGGER.warning("No IR remote entity found for button delete: %s", entity_id)
+            return
+
+        group = button_entity.group
+        slot = button_entity.slot
+        remote_entity = remote_match
+        result = await remote_entity.async_remove(str(slot), group)
+        if result is False:
+            _notify(
+                hass,
+                log_title,
+                f"删除红外按键失败：group={group}, slot={slot}。请确认设备在线后重试。",
+                notification_id,
+            )
+            _LOGGER.warning("Delete IR button failed: %s group=%s slot=%s", entity_id, group, slot)
+            return
+
+        buttons = [
+            button
+            for button in entry.options.get(CONF_REMOTE_BUTTONS, [])
+            if not (
+                button.get(BUTTON_TYPE) == TYPE_IR
+                and _button_group(button) == group
+                and button.get(BUTTON_SLOT) == slot
+            )
+        ]
+        options = {**entry.options, CONF_REMOTE_BUTTONS: buttons}
+        hass.config_entries.async_update_entry(entry, options=options)
+        _notify(
+            hass,
+            log_title,
+            f"已删除红外按键：group={group}, slot={slot}，并移除对应按钮实体。",
+            notification_id,
+        )
+        _LOGGER.info("Delete IR button success: %s group=%s slot=%s", entity_id, group, slot)
+
     if not hass.services.has_service(DOMAIN, SERVICE_LEARN_IR_BUTTON):
         hass.services.async_register(
             DOMAIN,
             SERVICE_LEARN_IR_BUTTON,
             _handle_learning_service,
             schema=LEARN_BUTTON_SCHEMA,
+        )
+    if not hass.services.has_service(DOMAIN, SERVICE_CLEAR_IR_GROUP):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_CLEAR_IR_GROUP,
+            _handle_clear_ir_group,
+            schema=CLEAR_GROUP_SCHEMA,
+        )
+    if not hass.services.has_service(DOMAIN, SERVICE_DELETE_IR_BUTTON):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_DELETE_IR_BUTTON,
+            _handle_delete_ir_button,
+            schema=DELETE_BUTTON_SCHEMA,
         )
     if not hass.services.has_service(DOMAIN, SERVICE_LEARN_RF_BUTTON):
         hass.services.async_register(
@@ -195,10 +345,37 @@ def _find_remote_entity(hass: HomeAssistant, entity_id: str, remote_type: str) -
     return None
 
 
-def _remote_button_slot(buttons: list[dict], remote_type: str, name: str) -> int:
+def _find_remote_entity_for_entry(hass: HomeAssistant, entry_id: str, remote_type: str) -> object | None:
+    """Return the remote entity for a config entry and remote type."""
+    entry_data = hass.data.get(DOMAIN, {}).get(entry_id)
+    if entry_data is None:
+        return None
+    for entity in entry_data.get(DATA_REMOTE_ENTITIES, []):
+        if entity.remote_type == remote_type:
+            return entity
+    return None
+
+
+def _find_remote_button_entity(hass: HomeAssistant, entity_id: str, remote_type: str) -> tuple[ConfigEntry, object] | None:
+    """Return the config entry and learned remote button entity."""
+    for entry_id, entry_data in hass.data.get(DOMAIN, {}).items():
+        for entity in entry_data.get(DATA_REMOTE_BUTTON_ENTITIES, []):
+            if entity.entity_id == entity_id and entity.remote_type == remote_type:
+                entry = hass.config_entries.async_get_entry(entry_id)
+                if entry is None:
+                    return None
+                return entry, entity
+    return None
+
+
+def _remote_button_slot(buttons: list[dict], remote_type: str, group: str, name: str) -> int:
     """Return an existing same-name slot, or the next unused slot."""
     for button in buttons:
-        if button.get(BUTTON_TYPE) == remote_type and button.get(BUTTON_NAME) == name:
+        if (
+            button.get(BUTTON_TYPE) == remote_type
+            and _button_group(button) == group
+            and button.get(BUTTON_NAME) == name
+        ):
             slot = button.get(BUTTON_SLOT)
             if isinstance(slot, int):
                 return slot
@@ -206,12 +383,19 @@ def _remote_button_slot(buttons: list[dict], remote_type: str, name: str) -> int
     used_slots = {
         button.get(BUTTON_SLOT)
         for button in buttons
-        if button.get(BUTTON_TYPE) == remote_type and isinstance(button.get(BUTTON_SLOT), int)
+        if button.get(BUTTON_TYPE) == remote_type
+        and _button_group(button) == group
+        and isinstance(button.get(BUTTON_SLOT), int)
     }
     slot = DEFAULT_SLOT
     while slot in used_slots and slot <= SLOT_RANGE["max"]:
         slot += 1
     return slot
+
+
+def _button_group(button: dict) -> str:
+    """Return a stored button group, defaulting old mappings to pykongke."""
+    return button.get(BUTTON_GROUP) or DEFAULT_REMOTE_GROUP
 
 
 def _notify(hass: HomeAssistant, title: str, message: str, notification_id: str) -> None:

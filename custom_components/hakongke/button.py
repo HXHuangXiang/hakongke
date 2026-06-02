@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
+    BUTTON_GROUP,
     BUTTON_NAME,
     BUTTON_SLOT,
     BUTTON_TYPE,
@@ -18,6 +19,8 @@ from .const import (
     DATA_DEVICE,
     DATA_MODEL,
     DATA_NAME,
+    DATA_REMOTE_BUTTON_ENTITIES,
+    DEFAULT_REMOTE_GROUP,
     DOMAIN,
     TYPE_IR,
     TYPE_RF,
@@ -39,6 +42,7 @@ async def async_setup_entry(
         for button in buttons
         if _valid_button(button)
     ]
+    data[DATA_REMOTE_BUTTON_ENTITIES].extend(entities)
     async_add_entities(entities)
 
 
@@ -72,11 +76,30 @@ class KonkeRemoteButton(ButtonEntity):
         """Initialize a learned remote button."""
         self._device = device
         self._remote_type = button[BUTTON_TYPE]
+        self._group = button.get(BUTTON_GROUP) or DEFAULT_REMOTE_GROUP
         self._slot = button[BUTTON_SLOT]
         self._attr_name = button[BUTTON_NAME].strip()
         identifier = device.mac or f"{host}:{model}"
-        self._attr_unique_id = f"{identifier}:{self._remote_type}:button:{self._slot}"
+        suffix = f"{self._remote_type}:button:{self._slot}"
+        if self._group != DEFAULT_REMOTE_GROUP:
+            suffix = f"{self._remote_type}:button:{self._group}:{self._slot}"
+        self._attr_unique_id = f"{identifier}:{suffix}"
         self._attr_device_info = _device_info(device, device_name, model, host)
+
+    @property
+    def remote_type(self) -> str:
+        """Return the remote type."""
+        return self._remote_type
+
+    @property
+    def group(self) -> str:
+        """Return the learned command group."""
+        return self._group
+
+    @property
+    def slot(self) -> int:
+        """Return the learned command slot."""
+        return self._slot
 
     @property
     def available(self) -> bool:
@@ -93,7 +116,7 @@ class KonkeRemoteButton(ButtonEntity):
         """Send the learned remote command."""
         slot = str(self._slot)
         if self._remote_type == TYPE_IR:
-            await self._device.ir_emit(slot)
+            await self._device.ir_emit(slot, self._group)
         elif self._remote_type == TYPE_RF:
-            await self._device.rf_emit(slot)
+            await self._device.rf_emit(slot, self._group)
         _LOGGER.debug("Send %s remote button slot %s: %s", self._remote_type, slot, self.unique_id)

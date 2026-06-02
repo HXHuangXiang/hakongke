@@ -52,3 +52,31 @@ learn_rf_button:
           min: 0
           mode: box
           unit_of_measurement: 秒
+clear_ir_group:
+  name: 清空红外按键组
+  description: 清空所选控客设备指定红外组中的所有已学习按键，并移除 Home Assistant 中该组保存的红外按钮实体。
+  fields:
+    entity_id:
+      name: 红外遥控实体
+      description: 选择要清空红外按键组的红外遥控实体。
+      required: true
+      selector:
+        entity:
+          domain: remote
+    group:
+      name: 红外组
+      description: 输入要清空的红外组。hakongke 新学习的按键默认使用 pykongke。
+      required: true
+      selector:
+        text: {}
+delete_ir_button:
+  name: 删除红外按钮
+  description: 删除一个已学习红外按钮，同时删除控客设备中对应 group 和 slot 的红外按键。
+  fields:
+    entity_id:
+      name: 红外按钮实体
+      description: 选择要删除的红外按钮实体。
+      required: true
+      selector:
+        entity:
+          domain: button

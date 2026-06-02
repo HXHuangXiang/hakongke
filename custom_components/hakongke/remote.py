@@ -33,6 +33,7 @@ from .const import (
     DATA_MODEL,
     DATA_NAME,
     DATA_REMOTE_ENTITIES,
+    DEFAULT_REMOTE_GROUP,
     DEFAULT_TIMEOUT,
     DOMAIN,
     MODEL_MINIK,
@@ -187,12 +188,13 @@ class KonkeRemote(RemoteEntity):
                 await self._do_send_command(item)
                 await asyncio.sleep(delay)
 
-    async def async_learn(self, command: str, timeout: int = DEFAULT_TIMEOUT) -> bool:
+    async def async_learn(self, command: str, group: str | None = None, timeout: int = DEFAULT_TIMEOUT) -> bool:
         """Learn a command using the legacy service."""
+        group = group or DEFAULT_REMOTE_GROUP
         if self._remote_type == TYPE_IR:
-            return await self._device.ir_learn(command, timeout=timeout)
+            return await self._device.ir_learn(command, group=group, timeout=timeout)
         if self._remote_type == TYPE_RF:
-            return await self._device.rf_learn(command, timeout=timeout)
+            return await self._device.rf_learn(command, group=group, timeout=timeout)
         return False
 
     async def async_learn_command(self, **kwargs) -> None:
@@ -221,6 +223,24 @@ class KonkeRemote(RemoteEntity):
                 await self._device.ir_remove(slot)
             elif self._remote_type == TYPE_RF:
                 await self._device.rf_remove(slot)
+
+    async def async_remove(self, command: str, group: str | None = None) -> bool | None:
+        """Remove one learned command from this remote type's group."""
+        group = group or DEFAULT_REMOTE_GROUP
+        if self._remote_type == TYPE_IR:
+            return await self._device.ir_remove(command, group)
+        if self._remote_type == TYPE_RF:
+            return await self._device.rf_remove(command, group)
+        return False
+
+    async def async_remove_group(self, group: str | None = None) -> bool | None:
+        """Remove all learned commands from this remote type's group."""
+        group = group or DEFAULT_REMOTE_GROUP
+        if self._remote_type == TYPE_IR:
+            return await self._device.ir_remove_group(group)
+        if self._remote_type == TYPE_RF:
+            return await self._device.rf_remove_group(group)
+        return False
 
     async def _do_send_command(self, command: str) -> bool:
         """Send a single remote command."""

@@ -188,7 +188,34 @@ data:
 
 ## 删除或修改已学习按键
 
-当前版本暂不提供专门的删除/改名界面。如果需要整理已学习按钮，可以删除 hakongke 集成后重新添加并重新学习；高级用户也可以自行编辑 Home Assistant 配置存储中的按键映射。
+hakongke 新学习的红外按键默认保存在 `pykongke` 这个 group 中。
+
+如果需要删除某个具体红外按键，可以打开 Home Assistant “开发者工具 -> 动作”，选择 `hakongke.delete_ir_button`，然后选择要删除的按钮实体。这个动作会同时删除控客设备里的具体红外按键，并移除 Home Assistant 中保存的按钮。
+
+动作 YAML 示例：
+
+```yaml
+service: hakongke.delete_ir_button
+data:
+  entity_id: button.kong_ke_ting_hong_wai_dian_shi_dian_yuan
+```
+
+如果需要清空某个控客设备里历史学习过的一整个红外组，可以打开 Home Assistant “开发者工具 -> 动作”，选择 `hakongke.clear_ir_group`，选择对应的“红外遥控”实体，并输入要清空的 group。
+
+动作 YAML 示例：
+
+```yaml
+service: hakongke.clear_ir_group
+data:
+  entity_id: remote.kong_ke_ting_hong_wai_ir
+  group: pykongke
+```
+
+这个动作会清空所选控客设备指定红外组中的所有已学习按键，并移除 Home Assistant 中该组保存的红外按钮实体。执行后如果还需要使用某个按键，需要重新学习。
+
+如果是旧插件或历史数据占用了其它 group，hakongke 无法自动枚举设备里有哪些 group，需要你手动输入历史 group 名称后清理。
+
+当前版本暂不提供按钮改名界面。如果只需要整理 Home Assistant 里显示的按钮，高级用户也可以自行编辑 Home Assistant 配置存储中的按键映射。
 
 ## 高级用法
 
