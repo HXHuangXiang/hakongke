@@ -18,6 +18,7 @@ from .const import (
     CONF_ENABLE_RF_REMOTE,
     CONF_ENABLE_SWITCH,
     CONF_MODEL,
+    CONF_REMOTE_BUTTONS,
     DEFAULT_NAME,
     DOMAIN,
     MODELS,
@@ -149,5 +150,6 @@ class KonkeOptionsFlow(config_entries.OptionsFlow):
                 CONF_ENABLE_LIGHT: user_input[CONF_ENABLE_LIGHT],
                 CONF_ENABLE_IR_REMOTE: user_input[CONF_ENABLE_IR_REMOTE],
                 CONF_ENABLE_RF_REMOTE: user_input[CONF_ENABLE_RF_REMOTE],
+                CONF_REMOTE_BUTTONS: self.config_entry.options.get(CONF_REMOTE_BUTTONS, []),
             },
         )

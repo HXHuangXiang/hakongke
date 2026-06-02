@@ -11,6 +11,7 @@ CONF_ENABLE_SWITCH = "enable_switch"
 CONF_ENABLE_LIGHT = "enable_light"
 CONF_ENABLE_IR_REMOTE = "enable_ir_remote"
 CONF_ENABLE_RF_REMOTE = "enable_rf_remote"
+CONF_REMOTE_BUTTONS = "remote_buttons"
 
 DEFAULT_NAME = "hakongke"
 DEFAULT_TIMEOUT = 10
@@ -47,6 +48,10 @@ REMOTE_MODELS = {MODEL_K2, MODEL_MINIK}
 
 TYPE_IR = "ir"
 TYPE_RF = "rf"
+
+BUTTON_NAME = "name"
+BUTTON_SLOT = "slot"
+BUTTON_TYPE = "type"
 
 DATA_DEVICE = "device"
 DATA_MODEL = CONF_MODEL

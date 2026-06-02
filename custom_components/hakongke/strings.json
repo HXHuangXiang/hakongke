@@ -2,32 +2,32 @@
   "config": {
     "step": {
       "user": {
-        "title": "Add hakongke device",
-        "description": "Configure a local hakongke device.",
+        "title": "添加 hakongke 设备",
+        "description": "配置本地控客设备。",
         "data": {
-          "host": "Host",
-          "name": "Name",
-          "model": "Model",
-          "enable_switch": "Create switch entities",
-          "enable_light": "Create light entities",
-          "enable_ir_remote": "Create IR remote entity",
-          "enable_rf_remote": "Create RF remote entity"
+          "host": "设备 IP",
+          "name": "名称",
+          "model": "型号",
+          "enable_switch": "创建开关实体",
+          "enable_light": "创建灯实体",
+          "enable_ir_remote": "创建红外遥控实体",
+          "enable_rf_remote": "创建射频遥控实体"
         }
       }
     },
     "abort": {
-      "already_configured": "This hakongke device is already configured."
+      "already_configured": "这个 hakongke 设备已经配置过。"
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "hakongke options",
+        "title": "hakongke 选项",
         "data": {
-          "enable_switch": "Create switch entities",
-          "enable_light": "Create light entities",
-          "enable_ir_remote": "Create IR remote entity",
-          "enable_rf_remote": "Create RF remote entity"
+          "enable_switch": "创建开关实体",
+          "enable_light": "创建灯实体",
+          "enable_ir_remote": "创建红外遥控实体",
+          "enable_rf_remote": "创建射频遥控实体"
         }
       }
     }
@@ -35,7 +35,7 @@
   "entity": {
     "switch": {
       "outlet": {
-        "name": "Outlet"
+        "name": "插座"
       },
       "usb": {
         "name": "USB"
@@ -43,7 +43,7 @@
     },
     "sensor": {
       "power": {
-        "name": "Power"
+        "name": "功率"
       }
     }
   }

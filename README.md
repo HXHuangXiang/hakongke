@@ -135,33 +135,65 @@ CONFIGURATION VARIABLES:
 支持的 model 见上方 Supported Devices 表格。
   
 遥控使用方法：
-控客的遥控器是不支持直接输入遥控编码的，只能通过学习添加遥控器。
 
-- 添加遥控：
-进入 service 界面，选择 hakongke.ir_learn 或 hakongke.rf_learn。
+控客遥控不支持直接粘贴遥控编码，需要把实体遥控器的按键学习到设备中。hakongke 会在学习成功后自动创建一个按钮实体，后续直接点击按钮即可发送遥控命令。
+
+## UI 添加遥控实体
+
+1. 进入“设置 -> 设备与服务 -> 添加集成”。
+2. 搜索并添加 `hakongke`。
+3. 填写设备 IP、名称、型号。
+4. 如果设备支持红外，勾选 `Create IR remote entity`；如果设备支持射频，勾选 `Create RF remote entity`。
+5. 添加完成后，到实体列表中找到“红外遥控”或“射频遥控”实体，学习按键时要选择这个实体。
+
+Mini K / Mini Pro 一般只支持红外遥控；K2 Pro 可创建红外和射频遥控实体。
+
+## 查看遥控实体 ID
+
+在“设置 -> 设备与服务 -> 实体”里找到“红外遥控”或“射频遥控”实体，点开实体详情，再点击右上角齿轮图标进入实体设置页，可以看到“实体标识符”。这个值就是后面动作调用要填的 `entity_id`。
+
+例如客厅红外实体可能是：
+
 ```yaml
-{
-  "entity_id": 【设备的entity_id】,
-  "slot": 【命令id，取值范围1000-999999】,
-  "timeout": 【超时时长，默认10s】
-}
+remote.kong_ke_ting_hong_wai_ir
 ```
-注意 slot 参数是 int 格式，周围不能带引号，timeout 参数不带单位，否则命令会不生效。
-学习开始、成功或失败会在 Home Assistant 持久通知中显示，也会写入 Home Assistant 日志。
 
-- 使用遥控：
-调用remote.send_command这个service，data:
+如果同一个家庭里有多个控客设备，学习和发送命令时必须选择对应房间的 `remote.xxx`，否则命令会学习到另一个设备上。
+
+## 学习一个遥控按键
+
+1. 打开 Home Assistant “开发者工具 -> 动作”。旧版 Home Assistant 里这个入口叫“服务”。
+2. 学习红外按键时，在动作里搜索并选择 `hakongke.learn_ir_button`；学习射频按键时选择 `hakongke.learn_rf_button`。
+3. `entity_id` 选择前面创建的“红外遥控”或“射频遥控”实体。
+4. `name` 填按键名称，例如 `电视电源`、`音量+`、`空调制冷`。
+5. `timeout` 可不填，默认 10 秒；如果来不及按遥控器，可以填大一点，例如 `20`。
+6. 点击“执行动作”后，立刻对着控客设备按下实体遥控器上的目标按键。
+7. 学习成功后会自动创建一个按钮实体，后续直接点击该按钮即可发送遥控命令。
+
+动作 YAML 示例：
+
 ```yaml
-{
-  "entity_id": 【设备的entity_id】,
-  "command": 【遥控类型ir或rf】_【命令id，取值范围1000-999999】,
-  "num_repeats": 【发送次数，默认1】,
-  "delay_secs": 【两次发射间的延时，默认0.4s】
-}
+service: hakongke.learn_ir_button
+data:
+  entity_id: remote.kong_ke_ting_hong_wai_ir
+  name: 电视电源
+  timeout: 10
 ```
-使用示例：
 
-configuration.yaml中添加：
+注意：`timeout` 是数字，不要带 `s`、`秒` 等单位。
+
+## 使用已学习按键
+
+学习成功后，进入“设置 -> 设备与服务 -> 实体”，可以看到刚才按 `name` 创建出的按钮实体。把按钮加入仪表盘后，日常使用时直接点击按钮即可。
+
+## 删除或修改已学习按键
+
+当前版本暂不提供专门的删除/改名界面。如果需要整理已学习按钮，可以删除 hakongke 集成后重新添加并重新学习；高级用户也可以自行编辑 Home Assistant 配置存储中的按键映射。
+
+## 高级用法
+
+推荐使用 UI 添加。以下配置仅用于从旧 YAML 配置迁移：
+
 ```yaml
 remote:
   - platform: hakongke
@@ -170,28 +202,6 @@ remote:
     host: 192.168.2.162
     type: ir
 ```
-学习遥控：
-```yaml
-service: hakongke.ir_learn
-data:
-  entity_id: remote.k_ir_remote
-  slot: 1001
-  timeout: 10
-```
-使用遥控：
-```yaml
-service: remote.send_command
-data:
-  entity_id: remote.k_ir_remote
-  command: ir_1001
-  num_repeats: 1
-  delay_secs: 0.4
-```
-
-命令格式：
-
-- 红外命令：`ir_<slot>`，例如 `ir_1001`
-- 射频命令：`rf_<slot>`，例如 `rf_1001`
 
 # 升级与卸载
 

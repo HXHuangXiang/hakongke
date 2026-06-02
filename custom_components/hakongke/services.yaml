@@ -1,46 +1,54 @@
-ir_learn:
-  name: Learn IR command
-  description: Learn an infrared command into the Konke device default pykongke group.
+learn_ir_button:
+  name: 学习红外按键
+  description: 让控客设备学习一个红外遥控按键，成功后自动创建可点击的按钮实体。
   fields:
     entity_id:
+      name: 红外遥控实体
+      description: 选择要学习按键的红外遥控实体。
       required: true
       selector:
         entity:
           domain: remote
-    slot:
+    name:
+      name: 按键名称
+      description: 例如电视电源、音量+、空调制冷。
       required: true
       selector:
-        number:
-          min: 1000
-          max: 999999
-          mode: box
+        text: {}
     timeout:
+      name: 学习超时时间
+      description: 执行动作后，需要在这个时间内按下实体遥控器上的目标按键。
       required: false
       default: 10
       selector:
         number:
           min: 0
           mode: box
-rf_learn:
-  name: Learn RF command
-  description: Learn a radio frequency command into the Konke device default pykongke group.
+          unit_of_measurement: 秒
+learn_rf_button:
+  name: 学习射频按键
+  description: 让控客设备学习一个射频遥控按键，成功后自动创建可点击的按钮实体。
   fields:
     entity_id:
+      name: 射频遥控实体
+      description: 选择要学习按键的射频遥控实体。
       required: true
       selector:
         entity:
           domain: remote
-    slot:
+    name:
+      name: 按键名称
+      description: 例如窗帘打开、窗帘关闭、投影幕升起。
       required: true
       selector:
-        number:
-          min: 1000
-          max: 999999
-          mode: box
+        text: {}
     timeout:
+      name: 学习超时时间
+      description: 执行动作后，需要在这个时间内按下实体遥控器上的目标按键。
       required: false
       default: 10
       selector:
         number:
           min: 0
           mode: box
+          unit_of_measurement: 秒

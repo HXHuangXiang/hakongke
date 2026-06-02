@@ -130,7 +130,7 @@ class KonkeRemote(RemoteEntity):
         """Initialize the remote."""
         self._device = device
         self._remote_type = remote_type
-        self._attr_name = remote_type.upper()
+        self._attr_name = "红外遥控" if remote_type == TYPE_IR else "射频遥控"
         self._attr_unique_id = f"{device.mac or f'{host}:{model}'}:{remote_type}"
         self._attr_device_info = _device_info(device, name, model, host)
 
