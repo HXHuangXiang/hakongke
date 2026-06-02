@@ -80,3 +80,82 @@ delete_ir_button:
       selector:
         entity:
           domain: button
+send_ir_slot:
+  name: 发送红外 Slot
+  description: 根据已知 group 和 slot 直接发送红外命令，不保存按钮。
+  fields:
+    entity_id:
+      name: 红外遥控实体
+      description: 选择要发送红外命令的红外遥控实体。
+      required: true
+      selector:
+        entity:
+          domain: remote
+    slot:
+      name: Slot
+      description: 已学习红外按键的 slot 编号。
+      required: true
+      selector:
+        number:
+          min: 1000
+          max: 999999
+          mode: box
+    group:
+      name: 红外组
+      description: 已学习红外按键所在的 group。不填时默认使用 pykongke。
+      required: false
+      default: pykongke
+      selector:
+        text: {}
+    num_repeats:
+      name: 发送次数
+      description: 重复发送次数。
+      required: false
+      default: 1
+      selector:
+        number:
+          min: 1
+          mode: box
+    delay_secs:
+      name: 发送间隔
+      description: 重复发送时每次之间的间隔。
+      required: false
+      default: 0.4
+      selector:
+        number:
+          min: 0
+          mode: box
+          unit_of_measurement: 秒
+add_ir_button:
+  name: 保存红外 Slot 为按钮
+  description: 把设备里已存在的 group 和 slot 保存成 Home Assistant 按钮实体，不进入学习模式。
+  fields:
+    entity_id:
+      name: 红外遥控实体
+      description: 选择这个红外按键所属的红外遥控实体。
+      required: true
+      selector:
+        entity:
+          domain: remote
+    name:
+      name: 按键名称
+      description: 例如电视电源、音量+、空调制冷。
+      required: true
+      selector:
+        text: {}
+    slot:
+      name: Slot
+      description: 已学习红外按键的 slot 编号。
+      required: true
+      selector:
+        number:
+          min: 1000
+          max: 999999
+          mode: box
+    group:
+      name: 红外组
+      description: 已学习红外按键所在的 group。不填时默认使用 pykongke。
+      required: false
+      default: pykongke
+      selector:
+        text: {}

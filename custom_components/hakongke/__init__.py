@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.components.remote import ATTR_DELAY_SECS, ATTR_NUM_REPEATS
 from homeassistant.const import ATTR_ENTITY_ID, CONF_HOST, CONF_NAME, CONF_TIMEOUT, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
@@ -42,7 +44,10 @@ SERVICE_LEARN_IR_BUTTON = "learn_ir_button"
 SERVICE_LEARN_RF_BUTTON = "learn_rf_button"
 SERVICE_CLEAR_IR_GROUP = "clear_ir_group"
 SERVICE_DELETE_IR_BUTTON = "delete_ir_button"
+SERVICE_SEND_IR_SLOT = "send_ir_slot"
+SERVICE_ADD_IR_BUTTON = "add_ir_button"
 CONF_GROUP = "group"
+CONF_SLOT = "slot"
 
 LEARN_BUTTON_SCHEMA = vol.Schema(
     {
@@ -60,6 +65,25 @@ CLEAR_GROUP_SCHEMA = vol.Schema(
 )
 
 DELETE_BUTTON_SCHEMA = vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_id})
+
+SEND_SLOT_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(CONF_SLOT): vol.All(int, vol.Range(**SLOT_RANGE)),
+        vol.Optional(CONF_GROUP, default=DEFAULT_REMOTE_GROUP): cv.string,
+        vol.Optional(ATTR_NUM_REPEATS, default=1): vol.All(int, vol.Range(min=1)),
+        vol.Optional(ATTR_DELAY_SECS, default=0.4): vol.Coerce(float),
+    }
+)
+
+ADD_BUTTON_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(CONF_NAME): cv.string,
+        vol.Required(CONF_SLOT): vol.All(int, vol.Range(**SLOT_RANGE)),
+        vol.Optional(CONF_GROUP, default=DEFAULT_REMOTE_GROUP): cv.string,
+    }
+)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -303,6 +327,84 @@ def _register_learning_services(hass: HomeAssistant) -> None:
         )
         _LOGGER.info("Delete IR button success: %s group=%s slot=%s", entity_id, group, slot)
 
+    async def _handle_send_ir_slot(call: ServiceCall) -> None:
+        entity_id = call.data[ATTR_ENTITY_ID]
+        group = call.data[CONF_GROUP].strip() or DEFAULT_REMOTE_GROUP
+        slot = call.data[CONF_SLOT]
+        num_repeats = call.data[ATTR_NUM_REPEATS]
+        delay = call.data[ATTR_DELAY_SECS]
+        notification_id = f"{DOMAIN}_send_ir_slot"
+        log_title = "hakongke 红外发送"
+
+        match = _find_remote_entity(hass, entity_id, TYPE_IR)
+        if match is None:
+            _notify(
+                hass,
+                log_title,
+                f"没有找到匹配的红外遥控实体：{entity_id}。",
+                notification_id,
+            )
+            _LOGGER.warning("No IR remote entity matched send slot request: %s", entity_id)
+            return
+
+        _, entity = match
+        for repeat in range(num_repeats):
+            if repeat > 0 and delay > 0:
+                await asyncio.sleep(delay)
+            await entity.async_emit(str(slot), group)
+
+        _notify(
+            hass,
+            log_title,
+            f"已发送红外命令：group={group}, slot={slot}。",
+            notification_id,
+        )
+        _LOGGER.info("Send IR slot success: %s group=%s slot=%s", entity_id, group, slot)
+
+    async def _handle_add_ir_button(call: ServiceCall) -> None:
+        entity_id = call.data[ATTR_ENTITY_ID]
+        name = call.data[CONF_NAME].strip()
+        group = call.data[CONF_GROUP].strip() or DEFAULT_REMOTE_GROUP
+        slot = call.data[CONF_SLOT]
+        notification_id = f"{DOMAIN}_add_ir_button"
+        log_title = "hakongke 红外按钮"
+
+        if not name:
+            _notify(hass, log_title, "按键名称不能为空。", notification_id)
+            return
+
+        match = _find_remote_entity(hass, entity_id, TYPE_IR)
+        if match is None:
+            _notify(
+                hass,
+                log_title,
+                f"没有找到匹配的红外遥控实体：{entity_id}。",
+                notification_id,
+            )
+            _LOGGER.warning("No IR remote entity matched add button request: %s", entity_id)
+            return
+
+        entry, _ = match
+        buttons = [
+            button
+            for button in entry.options.get(CONF_REMOTE_BUTTONS, [])
+            if not (
+                button.get(BUTTON_TYPE) == TYPE_IR
+                and _button_group(button) == group
+                and button.get(BUTTON_SLOT) == slot
+            )
+        ]
+        buttons.append({BUTTON_TYPE: TYPE_IR, BUTTON_GROUP: group, BUTTON_SLOT: slot, BUTTON_NAME: name})
+        options = {**entry.options, CONF_REMOTE_BUTTONS: buttons}
+        hass.config_entries.async_update_entry(entry, options=options)
+        _notify(
+            hass,
+            log_title,
+            f"已保存红外按钮“{name}”：group={group}, slot={slot}。",
+            notification_id,
+        )
+        _LOGGER.info("Add IR button success: %s group=%s slot=%s name=%s", entity_id, group, slot, name)
+
     if not hass.services.has_service(DOMAIN, SERVICE_LEARN_IR_BUTTON):
         hass.services.async_register(
             DOMAIN,
@@ -323,6 +425,20 @@ def _register_learning_services(hass: HomeAssistant) -> None:
             SERVICE_DELETE_IR_BUTTON,
             _handle_delete_ir_button,
             schema=DELETE_BUTTON_SCHEMA,
+        )
+    if not hass.services.has_service(DOMAIN, SERVICE_SEND_IR_SLOT):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SEND_IR_SLOT,
+            _handle_send_ir_slot,
+            schema=SEND_SLOT_SCHEMA,
+        )
+    if not hass.services.has_service(DOMAIN, SERVICE_ADD_IR_BUTTON):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_ADD_IR_BUTTON,
+            _handle_add_ir_button,
+            schema=ADD_BUTTON_SCHEMA,
         )
     if not hass.services.has_service(DOMAIN, SERVICE_LEARN_RF_BUTTON):
         hass.services.async_register(

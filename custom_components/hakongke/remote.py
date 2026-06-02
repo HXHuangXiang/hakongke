@@ -242,6 +242,17 @@ class KonkeRemote(RemoteEntity):
             return await self._device.rf_remove_group(group)
         return False
 
+    async def async_emit(self, command: str, group: str | None = None) -> bool:
+        """Emit one learned command from this remote type's group."""
+        group = group or DEFAULT_REMOTE_GROUP
+        if self._remote_type == TYPE_IR:
+            await self._device.ir_emit(command, group)
+        elif self._remote_type == TYPE_RF:
+            await self._device.rf_emit(command, group)
+        else:
+            return False
+        return True
+
     async def _do_send_command(self, command: str) -> bool:
         """Send a single remote command."""
         command_type, slot = self._parse_command(command)
@@ -249,11 +260,7 @@ class KonkeRemote(RemoteEntity):
             _LOGGER.warning("Illegal command type: %s", command)
             return False
 
-        if self._remote_type == TYPE_IR:
-            await self._device.ir_emit(slot)
-        elif self._remote_type == TYPE_RF:
-            await self._device.rf_emit(slot)
-        return True
+        return await self.async_emit(slot)
 
     @staticmethod
     def _parse_command(command: str) -> tuple[str | None, str | None]:

@@ -186,6 +186,35 @@ data:
 
 学习成功后，进入“设置 -> 设备与服务 -> 实体”，可以看到刚才按 `name` 创建出的按钮实体。把按钮加入仪表盘后，日常使用时直接点击按钮即可。
 
+## 按 group 和 slot 直接发送红外
+
+如果设备里已经有历史学习数据，并且你知道它的 group 和 slot，可以不重新学习，直接调用 `hakongke.send_ir_slot` 发送。`group` 不填时默认使用 `pykongke`。
+
+动作 YAML 示例：
+
+```yaml
+service: hakongke.send_ir_slot
+data:
+  entity_id: remote.kong_ke_ting_hong_wai_ir
+  slot: 1001
+  group: pykongke
+  num_repeats: 1
+  delay_secs: 0.4
+```
+
+如果确认某个历史 group/slot 可用，可以调用 `hakongke.add_ir_button` 把它保存成按钮。这个动作不会进入学习模式，也不会写入设备红外数据，只会在 Home Assistant 中创建按钮映射。
+
+动作 YAML 示例：
+
+```yaml
+service: hakongke.add_ir_button
+data:
+  entity_id: remote.kong_ke_ting_hong_wai_ir
+  name: 电视电源
+  slot: 1001
+  group: pykongke
+```
+
 ## 删除或修改已学习按键
 
 hakongke 新学习的红外按键默认保存在 `pykongke` 这个 group 中。
