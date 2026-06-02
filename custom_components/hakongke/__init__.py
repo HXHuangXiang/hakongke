@@ -9,8 +9,9 @@ import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.remote import ATTR_DELAY_SECS, ATTR_NUM_REPEATS
+from homeassistant.components import persistent_notification
 from homeassistant.const import ATTR_ENTITY_ID, CONF_HOST, CONF_NAME, CONF_TIMEOUT, Platform
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
@@ -202,8 +203,8 @@ def _register_learning_services(hass: HomeAssistant) -> None:
             )
         ]
         buttons.append({BUTTON_TYPE: remote_type, BUTTON_GROUP: group, BUTTON_SLOT: slot, BUTTON_NAME: name})
-        options = {**entry.options, CONF_REMOTE_BUTTONS: buttons}
-        hass.config_entries.async_update_entry(entry, options=options)
+        if not _save_remote_buttons(hass, entry, buttons, log_title, notification_id):
+            return
         _notify(
             hass,
             log_title,
@@ -256,8 +257,8 @@ def _register_learning_services(hass: HomeAssistant) -> None:
             for button in entry.options.get(CONF_REMOTE_BUTTONS, [])
             if not (button.get(BUTTON_TYPE) == TYPE_IR and _button_group(button) == group)
         ]
-        options = {**entry.options, CONF_REMOTE_BUTTONS: buttons}
-        hass.config_entries.async_update_entry(entry, options=options)
+        if not _save_remote_buttons(hass, entry, buttons, log_title, notification_id):
+            return
         _notify(
             hass,
             log_title,
@@ -317,8 +318,8 @@ def _register_learning_services(hass: HomeAssistant) -> None:
                 and button.get(BUTTON_SLOT) == slot
             )
         ]
-        options = {**entry.options, CONF_REMOTE_BUTTONS: buttons}
-        hass.config_entries.async_update_entry(entry, options=options)
+        if not _save_remote_buttons(hass, entry, buttons, log_title, notification_id):
+            return
         _notify(
             hass,
             log_title,
@@ -395,8 +396,8 @@ def _register_learning_services(hass: HomeAssistant) -> None:
             )
         ]
         buttons.append({BUTTON_TYPE: TYPE_IR, BUTTON_GROUP: group, BUTTON_SLOT: slot, BUTTON_NAME: name})
-        options = {**entry.options, CONF_REMOTE_BUTTONS: buttons}
-        hass.config_entries.async_update_entry(entry, options=options)
+        if not _save_remote_buttons(hass, entry, buttons, log_title, notification_id):
+            return
         _notify(
             hass,
             log_title,
@@ -514,15 +515,30 @@ def _button_group(button: dict) -> str:
     return button.get(BUTTON_GROUP) or DEFAULT_REMOTE_GROUP
 
 
+def _save_remote_buttons(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    buttons: list[dict],
+    title: str,
+    notification_id: str,
+) -> bool:
+    """Persist learned button mappings."""
+    options = {**entry.options, CONF_REMOTE_BUTTONS: buttons}
+    try:
+        hass.config_entries.async_update_entry(entry, options=options)
+    except Exception as err:  # noqa: BLE001 - Home Assistant surfaces this as an unknown action error.
+        _notify(hass, title, f"保存遥控按钮配置失败：{err}", notification_id)
+        _LOGGER.exception("Failed to update hakongke remote button options")
+        return False
+    return True
+
+
 def _notify(hass: HomeAssistant, title: str, message: str, notification_id: str) -> None:
     """Create or replace a persistent notification."""
-    hass.components.persistent_notification.async_create(
-        message,
-        title=title,
-        notification_id=notification_id,
-    )
+    persistent_notification.async_create(hass, message, title=title, notification_id=notification_id)
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+@callback
+def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload entry when options change."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
