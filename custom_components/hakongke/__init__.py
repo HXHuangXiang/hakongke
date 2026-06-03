@@ -13,6 +13,7 @@ from homeassistant.components import persistent_notification
 from homeassistant.const import ATTR_ENTITY_ID, CONF_HOST, CONF_NAME, CONF_TIMEOUT, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry as er
 
 from .const import (
     BUTTON_GROUP,
@@ -451,10 +452,14 @@ def _register_learning_services(hass: HomeAssistant) -> None:
 
 
 def _find_remote_entity(hass: HomeAssistant, entity_id: str, remote_type: str) -> tuple[ConfigEntry, object] | None:
-    """Return the config entry and remote entity matching a learning request."""
+    """Return the config entry and remote entity matching a service request."""
+    match = _find_registered_entity(hass, entity_id, remote_type, DATA_REMOTE_ENTITIES)
+    if match is not None:
+        return match
+
     for entry_id, entry_data in hass.data.get(DOMAIN, {}).items():
         for entity in entry_data.get(DATA_REMOTE_ENTITIES, []):
-            if entity.entity_id == entity_id and entity.remote_type == remote_type:
+            if getattr(entity, "entity_id", None) == entity_id and entity.remote_type == remote_type:
                 entry = hass.config_entries.async_get_entry(entry_id)
                 if entry is None:
                     return None
@@ -475,9 +480,47 @@ def _find_remote_entity_for_entry(hass: HomeAssistant, entry_id: str, remote_typ
 
 def _find_remote_button_entity(hass: HomeAssistant, entity_id: str, remote_type: str) -> tuple[ConfigEntry, object] | None:
     """Return the config entry and learned remote button entity."""
+    match = _find_registered_entity(hass, entity_id, remote_type, DATA_REMOTE_BUTTON_ENTITIES)
+    if match is not None:
+        return match
+
     for entry_id, entry_data in hass.data.get(DOMAIN, {}).items():
         for entity in entry_data.get(DATA_REMOTE_BUTTON_ENTITIES, []):
-            if entity.entity_id == entity_id and entity.remote_type == remote_type:
+            if getattr(entity, "entity_id", None) == entity_id and entity.remote_type == remote_type:
+                entry = hass.config_entries.async_get_entry(entry_id)
+                if entry is None:
+                    return None
+                return entry, entity
+    return None
+
+
+def _find_registered_entity(
+    hass: HomeAssistant,
+    entity_id: str,
+    remote_type: str,
+    data_key: str,
+) -> tuple[ConfigEntry, object] | None:
+    """Find an integration entity through Home Assistant's entity registry."""
+    registry = er.async_get(hass)
+    registry_entry = registry.async_get(entity_id)
+    if registry_entry is None or registry_entry.platform != DOMAIN:
+        return None
+
+    entry_ids = (
+        [registry_entry.config_entry_id]
+        if registry_entry.config_entry_id
+        else list(hass.data.get(DOMAIN, {}))
+    )
+    for entry_id in entry_ids:
+        if entry_id is None:
+            continue
+        entry_data = hass.data.get(DOMAIN, {}).get(entry_id)
+        if entry_data is None:
+            continue
+        for entity in entry_data.get(data_key, []):
+            if entity.remote_type != remote_type:
+                continue
+            if getattr(entity, "unique_id", None) == registry_entry.unique_id:
                 entry = hass.config_entries.async_get_entry(entry_id)
                 if entry is None:
                     return None

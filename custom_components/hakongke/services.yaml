@@ -9,6 +9,7 @@ learn_ir_button:
       selector:
         entity:
           domain: remote
+          integration: hakongke
     name:
       name: 按键名称
       description: 例如电视电源、音量+、空调制冷。
@@ -36,6 +37,7 @@ learn_rf_button:
       selector:
         entity:
           domain: remote
+          integration: hakongke
     name:
       name: 按键名称
       description: 例如窗帘打开、窗帘关闭、投影幕升起。
@@ -63,6 +65,7 @@ clear_ir_group:
       selector:
         entity:
           domain: remote
+          integration: hakongke
     group:
       name: 红外组
       description: 输入要清空的红外组。hakongke 新学习的按键默认使用 pykongke。
@@ -80,6 +83,7 @@ delete_ir_button:
       selector:
         entity:
           domain: button
+          integration: hakongke
 send_ir_slot:
   name: 发送红外 Slot
   description: 根据已知 group 和 slot 直接发送红外命令，不保存按钮。
@@ -91,6 +95,7 @@ send_ir_slot:
       selector:
         entity:
           domain: remote
+          integration: hakongke
     slot:
       name: Slot
       description: 已学习红外按键的 slot 编号。
@@ -137,6 +142,7 @@ add_ir_button:
       selector:
         entity:
           domain: remote
+          integration: hakongke
     name:
       name: 按键名称
       description: 例如电视电源、音量+、空调制冷。
